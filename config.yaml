@@ -1,0 +1,13 @@
+name: "SIEM Analyzer"
+app_id: "app-siem"
+version: "0.1.0"
+description: "Security event ingestion with tiered AI analysis, cost tracking, and real-time SOC dashboard"
+
+schemas:
+  - schemas/schema.graphql
+
+resources:
+  - resources/*.rs
+
+auth:
+  methods: [jwt, basic]

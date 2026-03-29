@@ -1,0 +1,89 @@
+# SIEM Analyzer — Security Event Ingestion + Tiered AI Analysis
+#
+# Events ingested via POST /app-siem/ingest (webhook or batch)
+# AI analysis via Haiku (default) -> Sonnet (severity escalation) -> Opus (strategic)
+# Cost tracking with daily budgets and hard caps
+
+type Event @table(expiration: 604800, database: "app-siem") @export(sse: true, mqtt: true, public: [read, subscribe]) {
+    id: ID! @primaryKey
+    timestamp: String! @indexed
+    source: String! @indexed        # "akamai", "cloudflare", "aws-waf", "custom", "simulation"
+    sourceIp: String @indexed
+    destinationIp: String
+    action: String @indexed         # "deny", "allow", "alert", "monitor"
+    severity: String @indexed       # "critical", "high", "medium", "low", "info"
+    category: String @indexed       # "credential_stuffing", "sqli", "xss", "bot", "ddos", "path_traversal"
+    method: String                  # HTTP method
+    path: String
+    host: String
+    userAgent: String
+    country: String @indexed
+    riskScore: Int                  # 0-100
+    botScore: Int                   # 0-100
+    rules: String                   # JSON array of triggered rule IDs/names
+    rawPayload: String              # original event payload (truncated)
+    batchId: String @indexed        # links event to analysis batch
+    metadata: String                # JSON: arbitrary fields from source
+}
+
+type AnalysisBatch @table(expiration: 7776000, database: "app-siem") @export(sse: true, public: [read, subscribe]) {
+    id: ID! @primaryKey
+    createdAt: String!
+    model: String!                  # "haiku", "sonnet", "opus"
+    eventCount: Int!
+    sampledCount: Int!
+    severity: String! @indexed      # overall batch severity
+    analysis: String!               # AI-generated analysis text
+    flags: String                   # JSON array of flag strings
+    notableIps: String              # JSON array of notable IPs with context
+    notablePatterns: String         # JSON array of detected patterns
+    tokenInput: Int
+    tokenOutput: Int
+    costUsd: String                 # cost as string to avoid float precision
+    escalated: String               # "true" if model was escalated from default
+    triggerReason: String           # "count", "time", "severity"
+}
+
+type AnalysisStrategic @table(expiration: 15552000, database: "app-siem") @export(public: [read]) {
+    id: ID! @primaryKey
+    createdAt: String!
+    model: String!                  # always "opus" for strategic
+    periodStart: String!
+    periodEnd: String!
+    batchCount: Int!
+    analysis: String!
+    severity: String! @indexed
+    recommendations: String         # JSON array
+    campaignsDetected: String       # JSON array of campaign descriptions
+    policyNotes: String             # JSON array of policy effectiveness notes
+    flags: String                   # JSON array
+    tokenInput: Int
+    tokenOutput: Int
+    costUsd: String
+}
+
+type CostTracking @table(database: "app-siem") @export {
+    id: ID! @primaryKey             # date string "YYYY-MM-DD"
+    haikuInput: Int
+    haikuOutput: Int
+    sonnetInput: Int
+    sonnetOutput: Int
+    opusInput: Int
+    opusOutput: Int
+    totalCostUsd: String
+    budgetWarning: String           # "true" if >$5
+    budgetExceeded: String          # "true" if >$10 (analysis halted)
+    escalationCount: Int
+}
+
+type Settings @table(database: "app-siem") @export {
+    id: ID! @primaryKey             # "default"
+    anthropicApiKey: String
+    batchThreshold: Int             # event count to trigger batch analysis (default 500)
+    timeCeiling: Int                # seconds before forced batch (default 300)
+    denyRatioEscalation: Float      # deny ratio to trigger model escalation (default 0.3)
+    dailyBudgetWarning: Float       # USD (default 5.0)
+    dailyBudgetHardCap: Float       # USD (default 10.0)
+    strategicInterval: Int          # hours between strategic analyses (default 24)
+    simulationMode: String          # "true" to enable simulation endpoints
+}
