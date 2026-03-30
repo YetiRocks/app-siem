@@ -265,15 +265,16 @@ fn call_anthropic(api_key: &str, model: &str, prompt: &str, max_tokens: u32) -> 
         "messages": [{"role": "user", "content": prompt}]
     });
 
-    let resp = fetch("https://api.anthropic.com/v1/messages", Some(json!({
-        "method": "POST",
-        "headers": {
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        },
-        "body": body.to_string()
-    })))?;
+    let resp = fetch("https://api.anthropic.com/v1/messages", Some(FetchOptions {
+        method: "POST".into(),
+        headers: vec![
+            ("x-api-key".into(), api_key.into()),
+            ("anthropic-version".into(), "2023-06-01".into()),
+            ("content-type".into(), "application/json".into()),
+        ],
+        body: Some(body.to_string()),
+        ..Default::default()
+    }))?;
 
     if !resp.ok() {
         return Err(YetiError::Validation(format!("Anthropic API error {}: {}", resp.status, resp.body)));
