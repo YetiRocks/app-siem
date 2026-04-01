@@ -9,7 +9,7 @@ use yeti_sdk::prelude::*;
 // Events are ingested into the real Event table with source="simulation".
 resource!(Simulate {
     name = "simulate",
-    create(request, ctx) => {
+    post(request, ctx) => {
         let body: Value = request.json()?;
         let scenario = body["scenario"].as_str().unwrap_or("mixed");
         let count = body["count"].as_u64().unwrap_or(50).min(1000) as usize;
@@ -24,11 +24,11 @@ resource!(Simulate {
             event_table.put(id, event.clone()).await?;
         }
 
-        reply().code(201).json(json!({
+        created_json!({
             "scenario": scenario,
             "generated": events.len(),
             "batchId": batch_id
-        }))
+        })
     }
 });
 
@@ -56,6 +56,7 @@ fn sim_credential_stuffing(i: usize, ts: u64, batch_id: &str) -> Value {
     let ip_idx = i % 5;
     let ips = ["192.168.1.100", "10.0.0.50", "172.16.0.22", "192.168.2.200", "10.0.1.33"];
     let agents = ["python-requests/2.28", "Go-http-client/2.0", "curl/7.88", "axios/1.4", "bot/1.0"];
+    let countries = ["CN", "RU", "BR", "VN", "ID"];
     let action = if i % 3 == 0 { "allow" } else { "deny" };
     json!({
         "id": format!("sim-cs-{}-{}", ts, i),
@@ -69,7 +70,7 @@ fn sim_credential_stuffing(i: usize, ts: u64, batch_id: &str) -> Value {
         "path": "/api/auth/login",
         "host": "api.example.com",
         "userAgent": agents[ip_idx],
-        "country": ["CN", "RU", "BR", "VN", "ID"][ip_idx],
+        "country": countries[ip_idx],
         "riskScore": 70 + (i % 30) as u64,
         "botScore": 60 + (i % 40) as u64,
         "rules": "[\"rate-limit-login\", \"geo-block\"]",
@@ -106,6 +107,7 @@ fn sim_sqli(i: usize, ts: u64, batch_id: &str) -> Value {
 }
 
 fn sim_xss(i: usize, ts: u64, batch_id: &str) -> Value {
+    let xss_countries = ["US", "DE", "FR", "GB", "JP"];
     json!({
         "id": format!("sim-xss-{}-{}", ts, i),
         "timestamp": ts.to_string(),
@@ -118,7 +120,7 @@ fn sim_xss(i: usize, ts: u64, batch_id: &str) -> Value {
         "path": "/api/comments",
         "host": "app.example.com",
         "userAgent": "Mozilla/5.0 (compatible; scanner)",
-        "country": ["US", "DE", "FR", "GB", "JP"][i % 5],
+        "country": xss_countries[i % 5],
         "riskScore": 75 + (i % 25) as u64,
         "botScore": 50 + (i % 50) as u64,
         "rules": "[\"xss-detection\"]",
@@ -157,6 +159,8 @@ fn sim_path_traversal(i: usize, ts: u64, batch_id: &str) -> Value {
 fn sim_bot_scanner(i: usize, ts: u64, batch_id: &str) -> Value {
     let paths = ["/robots.txt", "/.env", "/wp-admin", "/phpMyAdmin",
                  "/.git/config", "/api/swagger.json", "/actuator/health"];
+    let bot_agents = ["Googlebot/2.1", "AhrefsBot/7.0", "SemrushBot/7", "MJ12bot/v1.4", "masscan/1.3"];
+    let bot_countries = ["US", "DE", "NL", "SG", "GB"];
     json!({
         "id": format!("sim-bot-{}-{}", ts, i),
         "timestamp": ts.to_string(),
@@ -168,8 +172,8 @@ fn sim_bot_scanner(i: usize, ts: u64, batch_id: &str) -> Value {
         "method": "GET",
         "path": paths[i % paths.len()],
         "host": "www.example.com",
-        "userAgent": ["Googlebot/2.1", "AhrefsBot/7.0", "SemrushBot/7", "MJ12bot/v1.4", "masscan/1.3"][i % 5],
-        "country": ["US", "DE", "NL", "SG", "GB"][i % 5],
+        "userAgent": bot_agents[i % 5],
+        "country": bot_countries[i % 5],
         "riskScore": 30 + (i % 50) as u64,
         "botScore": 90 + (i % 10) as u64,
         "rules": "[\"bot-management\"]",
@@ -180,6 +184,8 @@ fn sim_bot_scanner(i: usize, ts: u64, batch_id: &str) -> Value {
 }
 
 fn sim_ddos(i: usize, ts: u64, batch_id: &str) -> Value {
+    let methods = ["GET", "POST", "HEAD"];
+    let ddos_countries = ["CN", "RU", "BR", "VN", "KR", "ID", "IN", "TR"];
     json!({
         "id": format!("sim-ddos-{}-{}", ts, i),
         "timestamp": ts.to_string(),
@@ -188,11 +194,11 @@ fn sim_ddos(i: usize, ts: u64, batch_id: &str) -> Value {
         "action": "deny",
         "severity": "critical",
         "category": "ddos",
-        "method": ["GET", "POST", "HEAD"][i % 3],
+        "method": methods[i % 3],
         "path": "/",
         "host": "api.example.com",
         "userAgent": "",
-        "country": ["CN", "RU", "BR", "VN", "KR", "ID", "IN", "TR"][i % 8],
+        "country": ddos_countries[i % 8],
         "riskScore": 95,
         "botScore": 99,
         "rules": "[\"ddos-mitigation\", \"rate-limit\"]",

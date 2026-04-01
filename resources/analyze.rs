@@ -14,7 +14,7 @@ use yeti_sdk::prelude::*;
 // Cost tracking: every call updates CostTracking table for the day
 resource!(Analyze {
     name = "analyze",
-    create(request, ctx) => {
+    post(request, ctx) => {
         let body: Value = request.json()?;
         let settings_table = ctx.get_table("Settings")?;
         let cost_table = ctx.get_table("CostTracking")?;
@@ -42,7 +42,7 @@ resource!(Analyze {
         }
 
         if body["strategic"].as_bool().unwrap_or(false) {
-            return run_strategic(ctx, api_key, &settings, &cost_record).await;
+            return run_strategic(&ctx, api_key, &settings, &cost_record).await;
         }
 
         // Batch analysis
@@ -138,9 +138,9 @@ resource!(Analyze {
         analysis_table.put(&analysis_id, record.clone()).await?;
 
         // Update cost tracking
-        update_cost_tracking(ctx, &today, model_label, input_tokens, output_tokens, cost).await?;
+        update_cost_tracking(&ctx, &today, model_label, input_tokens, output_tokens, cost).await?;
 
-        reply().code(201).json(record)
+        created(record)
     }
 });
 
@@ -183,7 +183,7 @@ async fn run_strategic(
     api_key: &str,
     settings: &Value,
     _cost_record: &Value,
-) -> Result<Response<Vec<u8>>> {
+) -> Result<Response<ResponseBody>> {
     let batch_table = ctx.get_table("AnalysisBatch")?;
     let strategic_table = ctx.get_table("AnalysisStrategic")?;
     let now = unix_timestamp()?;
@@ -253,9 +253,9 @@ async fn run_strategic(
     strategic_table.put(&analysis_id, record.clone()).await?;
 
     let today = today_key();
-    update_cost_tracking(ctx, &today, "opus", input_tokens, output_tokens, cost).await?;
+    update_cost_tracking(&ctx, &today, "opus", input_tokens, output_tokens, cost).await?;
 
-    reply().code(201).json(record)
+    created(record)
 }
 
 fn call_anthropic(api_key: &str, model: &str, prompt: &str, max_tokens: u32) -> Result<(String, u64, u64)> {
@@ -265,16 +265,12 @@ fn call_anthropic(api_key: &str, model: &str, prompt: &str, max_tokens: u32) -> 
         "messages": [{"role": "user", "content": prompt}]
     });
 
-    let resp = fetch("https://api.anthropic.com/v1/messages", Some(FetchOptions {
-        method: "POST".into(),
-        headers: vec![
-            ("x-api-key".into(), api_key.into()),
-            ("anthropic-version".into(), "2023-06-01".into()),
-            ("content-type".into(), "application/json".into()),
-        ],
-        body: Some(body.to_string()),
-        ..Default::default()
-    }))?;
+    let resp = fetch!("POST", "https://api.anthropic.com/v1/messages")
+        .header("x-api-key", api_key)
+        .header("anthropic-version", "2023-06-01")
+        .header("content-type", "application/json")
+        .body(&body.to_string())
+        .send()?;
 
     if !resp.ok() {
         return Err(YetiError::Validation(format!("Anthropic API error {}: {}", resp.status, resp.body)));

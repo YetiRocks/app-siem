@@ -11,7 +11,7 @@ use yeti_sdk::prelude::*;
 // Returns: { "ingested": N, "duplicates": N, "batchId": "..." }
 resource!(Ingest {
     name = "ingest",
-    create(request, ctx) => {
+    post(request, ctx) => {
         let body: Value = request.json()?;
         let event_table = ctx.get_table("Event")?;
         let now = unix_timestamp()?.to_string();
@@ -53,9 +53,8 @@ resource!(Ingest {
                 continue;
             }
 
-            let severity = event["severity"].as_str().unwrap_or(
-                &infer_severity(event)
-            );
+            let inferred = infer_severity(event);
+            let severity = event["severity"].as_str().unwrap_or(&inferred);
 
             let record = json!({
                 "id": id,
@@ -85,12 +84,12 @@ resource!(Ingest {
             ingested += 1;
         }
 
-        reply().code(201).json(json!({
+        created_json!({
             "ingested": ingested,
             "duplicates": duplicates,
             "batchId": batch_id,
             "total": events.len()
-        }))
+        })
     }
 });
 
