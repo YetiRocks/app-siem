@@ -47,7 +47,7 @@ Restart yeti. app-siem compiles automatically on first load (~2 minutes) and is 
 ### 2. Configure API key
 
 ```bash
-curl -X POST https://localhost:9996/app-siem/Settings \
+curl -X POST https://localhost/app-siem/api/Settings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -73,7 +73,7 @@ Response:
 ### 3. Ingest events
 
 ```bash
-curl -X POST https://localhost:9996/app-siem/ingest \
+curl -X POST https://localhost/app-siem/api/ingest \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '[
@@ -112,7 +112,7 @@ Response:
 ### 4. Run batch analysis
 
 ```bash
-curl -X POST https://localhost:9996/app-siem/analyze \
+curl -X POST https://localhost/app-siem/api/analyze \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{ "batchId": "batch-1711700000" }'
@@ -142,7 +142,7 @@ Response:
 ### 5. Run simulation
 
 ```bash
-curl -X POST https://localhost:9996/app-siem/simulate \
+curl -X POST https://localhost/app-siem/api/simulate \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{ "scenario": "credential_stuffing", "count": 100 }'
@@ -160,7 +160,7 @@ Response:
 ### 6. Check costs
 
 ```bash
-curl https://localhost:9996/app-siem/CostTracking/day-19810 \
+curl https://localhost/app-siem/api/CostTracking/day-19810 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -189,7 +189,7 @@ Response:
 Event Sources (Akamai, Cloudflare, AWS WAF, webhooks)
     |
     v
-POST /app-siem/ingest
+POST /app-siem/api/ingest
     |
     +-- dedup (hash of source+ip+timestamp+path)
     +-- severity inference (risk/action/category)
@@ -234,7 +234,7 @@ Yeti (embedded RocksDB, SSE + MQTT broker)
 
 ## Features
 
-### Event Ingestion (POST /app-siem/ingest)
+### Event Ingestion (POST /app-siem/api/ingest)
 
 Ingest security events from any source. Accepts a single event object or a JSON array (max 10,000 events per request).
 
@@ -269,7 +269,7 @@ Ingest security events from any source. Accepts a single event object or a JSON 
 | riskScore >= 20, or action is alert | low |
 | Everything else | info |
 
-### Batch Analysis (POST /app-siem/analyze)
+### Batch Analysis (POST /app-siem/api/analyze)
 
 Run AI analysis on a batch of ingested events. Provide `{ "batchId": "batch-..." }` to analyze a specific batch.
 
@@ -293,13 +293,13 @@ The AI receives the sampled events and returns structured JSON with severity ass
 
 Returns HTTP 429 when the daily budget hard cap is exceeded.
 
-### Strategic Analysis (POST /app-siem/analyze)
+### Strategic Analysis (POST /app-siem/api/analyze)
 
 Trigger a strategic review with `{ "strategic": true }`. Always uses claude-opus-4-6 ($15/$75 per MTok).
 
 Strategic analysis reviews all AnalysisBatch records from the last 24 hours, synthesizing cross-batch patterns into recommendations, campaign detection, and policy effectiveness notes. Results are stored as AnalysisStrategic records with a 180-day TTL.
 
-### Simulation Mode (POST /app-siem/simulate)
+### Simulation Mode (POST /app-siem/api/simulate)
 
 Generate realistic attack events for testing and demos. Events are written to the real Event table with `source: "simulation"`.
 
@@ -345,10 +345,10 @@ Real-time updates are built into the platform via `@export(sse: true, mqtt: true
 
 ```bash
 # SSE -- server-sent events for SOC dashboards
-curl "https://localhost:9996/app-siem/Event?stream=sse" --max-time 60
+curl "https://localhost/app-siem/api/Event?stream=sse" --max-time 60
 
 # SSE -- stream batch analysis results
-curl "https://localhost:9996/app-siem/AnalysisBatch?stream=sse" --max-time 60
+curl "https://localhost/app-siem/api/AnalysisBatch?stream=sse" --max-time 60
 
 # MQTT -- subscribe to security events
 mosquitto_sub -t "app-siem/Event" -h localhost -p 8883
@@ -365,16 +365,16 @@ Full CRUD on all tables is auto-generated from the schema:
 
 | Endpoint | Methods | Description |
 |----------|---------|-------------|
-| `/app-siem/Event` | GET, POST | List/create events |
-| `/app-siem/Event/{id}` | GET, PUT, DELETE | Read/update/delete an event |
-| `/app-siem/AnalysisBatch` | GET, POST | List/create batch analyses |
-| `/app-siem/AnalysisBatch/{id}` | GET, PUT, DELETE | Read/update/delete a batch analysis |
-| `/app-siem/AnalysisStrategic` | GET, POST | List/create strategic analyses |
-| `/app-siem/AnalysisStrategic/{id}` | GET, PUT, DELETE | Read/update/delete a strategic analysis |
-| `/app-siem/CostTracking` | GET, POST | List/create cost records |
-| `/app-siem/CostTracking/{id}` | GET, PUT, DELETE | Read/update/delete a cost record |
-| `/app-siem/Settings` | GET, POST | List/create settings |
-| `/app-siem/Settings/{id}` | GET, PUT, DELETE | Read/update/delete settings |
+| `/app-siem/api/Event` | GET, POST | List/create events |
+| `/app-siem/api/Event/{id}` | GET, PUT, DELETE | Read/update/delete an event |
+| `/app-siem/api/AnalysisBatch` | GET, POST | List/create batch analyses |
+| `/app-siem/api/AnalysisBatch/{id}` | GET, PUT, DELETE | Read/update/delete a batch analysis |
+| `/app-siem/api/AnalysisStrategic` | GET, POST | List/create strategic analyses |
+| `/app-siem/api/AnalysisStrategic/{id}` | GET, PUT, DELETE | Read/update/delete a strategic analysis |
+| `/app-siem/api/CostTracking` | GET, POST | List/create cost records |
+| `/app-siem/api/CostTracking/{id}` | GET, PUT, DELETE | Read/update/delete a cost record |
+| `/app-siem/api/Settings` | GET, POST | List/create settings |
+| `/app-siem/api/Settings/{id}` | GET, PUT, DELETE | Read/update/delete settings |
 
 Use `?limit=N` on collection endpoints to control result count. Use `?stream=sse` on exported tables for real-time streaming.
 
@@ -490,12 +490,12 @@ No expiration. Runtime configuration for the application.
 
 ## Configuration
 
-### Settings (PUT /app-siem/Settings/default)
+### Settings (PUT /app-siem/api/Settings/default)
 
 All runtime configuration is stored in the Settings table. Update via REST:
 
 ```bash
-curl -X PUT https://localhost:9996/app-siem/Settings/default \
+curl -X PUT https://localhost/app-siem/api/Settings/default \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -531,10 +531,11 @@ version: "0.1.0"
 description: "Security event ingestion with tiered AI analysis, cost tracking, and real-time SOC dashboard"
 
 schemas:
-  - schemas/schema.graphql
+  path: schemas/schema.graphql
 
 resources:
-  - resources/*.rs
+  path: resources/*.rs
+  route: /api
 
 auth:
   methods: [jwt, basic]
