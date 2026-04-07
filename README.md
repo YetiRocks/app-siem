@@ -47,7 +47,7 @@ Restart yeti. app-siem compiles automatically on first load (~2 minutes) and is 
 ### 2. Configure API key
 
 ```bash
-curl -X POST https://localhost/app-siem/api/Settings \
+curl -X POST https://localhost:9996/app-siem/api/Settings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -73,7 +73,7 @@ Response:
 ### 3. Ingest events
 
 ```bash
-curl -X POST https://localhost/app-siem/api/ingest \
+curl -X POST https://localhost:9996/app-siem/api/ingest \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '[
@@ -112,7 +112,7 @@ Response:
 ### 4. Run batch analysis
 
 ```bash
-curl -X POST https://localhost/app-siem/api/analyze \
+curl -X POST https://localhost:9996/app-siem/api/analyze \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{ "batchId": "batch-1711700000" }'
@@ -142,7 +142,7 @@ Response:
 ### 5. Run simulation
 
 ```bash
-curl -X POST https://localhost/app-siem/api/simulate \
+curl -X POST https://localhost:9996/app-siem/api/simulate \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{ "scenario": "credential_stuffing", "count": 100 }'
@@ -160,7 +160,7 @@ Response:
 ### 6. Check costs
 
 ```bash
-curl https://localhost/app-siem/api/CostTracking/day-19810 \
+curl https://localhost:9996/app-siem/api/CostTracking/day-19810 \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -345,10 +345,10 @@ Real-time updates are built into the platform via `@export(sse: true, mqtt: true
 
 ```bash
 # SSE -- server-sent events for SOC dashboards
-curl "https://localhost/app-siem/api/Event?stream=sse" --max-time 60
+curl "https://localhost:9996/app-siem/api/Event?stream=sse" --max-time 60
 
 # SSE -- stream batch analysis results
-curl "https://localhost/app-siem/api/AnalysisBatch?stream=sse" --max-time 60
+curl "https://localhost:9996/app-siem/api/AnalysisBatch?stream=sse" --max-time 60
 
 # MQTT -- subscribe to security events
 mosquitto_sub -t "app-siem/Event" -h localhost -p 8883
@@ -495,7 +495,7 @@ No expiration. Runtime configuration for the application.
 All runtime configuration is stored in the Settings table. Update via REST:
 
 ```bash
-curl -X PUT https://localhost/app-siem/api/Settings/default \
+curl -X PUT https://localhost:9996/app-siem/api/Settings/default \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
