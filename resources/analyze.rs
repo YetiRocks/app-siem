@@ -198,7 +198,7 @@ async fn run_strategic(
     }).collect();
 
     if recent.is_empty() {
-        return reply().json(json!({"error": "no batch analyses in the last 24 hours"}));
+        return not_found("no batch analyses in the last 24 hours");
     }
 
     // Build summary for Opus

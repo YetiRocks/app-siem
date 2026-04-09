@@ -84,12 +84,12 @@ resource!(Ingest {
             ingested += 1;
         }
 
-        created_json!({
+        reply().code(201).json(json!({
             "ingested": ingested,
             "duplicates": duplicates,
             "batchId": batch_id,
             "total": events.len()
-        })
+        }))
     }
 });
 

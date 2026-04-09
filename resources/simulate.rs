@@ -24,11 +24,11 @@ resource!(Simulate {
             event_table.put(id, event.clone()).await?;
         }
 
-        created_json!({
+        reply().code(201).json(json!({
             "scenario": scenario,
             "generated": events.len(),
             "batchId": batch_id
-        })
+        }))
     }
 });
 
