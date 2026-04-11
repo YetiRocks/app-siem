@@ -11,8 +11,8 @@ use yeti_sdk::prelude::*;
 // Returns: { "ingested": N, "duplicates": N, "batchId": "..." }
 resource!(Ingest {
     name = "ingest",
-    post(request, ctx) => {
-        let body: Value = request.json()?;
+    post(ctx) => {
+        let body: Value = ctx.require_json_body()?.clone();
         let event_table = ctx.get_table("Event")?;
         let now = unix_timestamp()?.to_string();
         let batch_id = format!("batch-{}", now);

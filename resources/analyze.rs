@@ -14,8 +14,8 @@ use yeti_sdk::prelude::*;
 // Cost tracking: every call updates CostTracking table for the day
 resource!(Analyze {
     name = "analyze",
-    post(request, ctx) => {
-        let body: Value = request.json()?;
+    post(ctx) => {
+        let body: Value = ctx.require_json_body()?.clone();
         let settings_table = ctx.get_table("Settings")?;
         let cost_table = ctx.get_table("CostTracking")?;
         let event_table = ctx.get_table("Event")?;
@@ -179,7 +179,7 @@ fn sample_events<'a>(events: &[&'a Value], max: usize) -> Vec<&'a Value> {
 }
 
 async fn run_strategic(
-    ctx: &ResourceParams,
+    ctx: &Context,
     api_key: &str,
     settings: &Value,
     _cost_record: &Value,
@@ -294,7 +294,7 @@ fn model_pricing(model: &str) -> (f64, f64) {
 }
 
 async fn update_cost_tracking(
-    ctx: &ResourceParams,
+    ctx: &Context,
     today: &str,
     model: &str,
     input_tokens: u64,

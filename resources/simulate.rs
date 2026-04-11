@@ -9,8 +9,8 @@ use yeti_sdk::prelude::*;
 // Events are ingested into the real Event table with source="simulation".
 resource!(Simulate {
     name = "simulate",
-    post(request, ctx) => {
-        let body: Value = request.json()?;
+    post(ctx) => {
+        let body: Value = ctx.require_json_body()?.clone();
         let scenario = body["scenario"].as_str().unwrap_or("mixed");
         let count = body["count"].as_u64().unwrap_or(50).min(1000) as usize;
         let event_table = ctx.get_table("Event")?;
