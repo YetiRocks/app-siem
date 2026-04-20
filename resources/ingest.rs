@@ -13,7 +13,7 @@ resource!(Ingest {
     name = "ingest",
     post(ctx) => {
         let body: Value = ctx.require_json_body()?.clone();
-        let event_table = ctx.get_table("Event")?;
+        let event_table = ctx.table("Event")?;
         let now = unix_timestamp()?.to_string();
         let batch_id = format!("batch-{}", now);
 

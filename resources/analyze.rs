@@ -16,9 +16,9 @@ resource!(Analyze {
     name = "analyze",
     post(ctx) => {
         let body: Value = ctx.require_json_body()?.clone();
-        let settings_table = ctx.get_table("Settings")?;
-        let cost_table = ctx.get_table("CostTracking")?;
-        let event_table = ctx.get_table("Event")?;
+        let settings_table = ctx.table("Settings")?;
+        let cost_table = ctx.table("CostTracking")?;
+        let event_table = ctx.table("Event")?;
 
         // Load settings
         let settings = settings_table.get("default").await?.unwrap_or(json!({}));
@@ -114,7 +114,7 @@ resource!(Analyze {
         }));
 
         // Store batch analysis
-        let analysis_table = ctx.get_table("AnalysisBatch")?;
+        let analysis_table = ctx.table("AnalysisBatch")?;
         let analysis_id = format!("ab-{}", unix_timestamp()?);
         let now = unix_timestamp()?.to_string();
 
@@ -184,8 +184,8 @@ async fn run_strategic(
     settings: &Value,
     _cost_record: &Value,
 ) -> Result<Response<ResponseBody>> {
-    let batch_table = ctx.get_table("AnalysisBatch")?;
-    let strategic_table = ctx.get_table("AnalysisStrategic")?;
+    let batch_table = ctx.table("AnalysisBatch")?;
+    let strategic_table = ctx.table("AnalysisStrategic")?;
     let now = unix_timestamp()?;
     let hours = 24u64;
     let period_start = now.saturating_sub(hours * 3600);
@@ -301,7 +301,7 @@ async fn update_cost_tracking(
     output_tokens: u64,
     cost: f64,
 ) -> Result<()> {
-    let cost_table = ctx.get_table("CostTracking")?;
+    let cost_table = ctx.table("CostTracking")?;
     let mut record = cost_table.get(today).await?.unwrap_or(json!({
         "id": today,
         "haikuInput": 0, "haikuOutput": 0,

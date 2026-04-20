@@ -13,7 +13,7 @@ resource!(Simulate {
         let body: Value = ctx.require_json_body()?.clone();
         let scenario = body["scenario"].as_str().unwrap_or("mixed");
         let count = body["count"].as_u64().unwrap_or(50).min(1000) as usize;
-        let event_table = ctx.get_table("Event")?;
+        let event_table = ctx.table("Event")?;
         let now = unix_timestamp()?;
         let batch_id = format!("sim-{}", now);
 
