@@ -181,7 +181,7 @@ fn sample_events<'a>(events: &[&'a Value], max: usize) -> Vec<&'a Value> {
 async fn run_strategic(
     ctx: &Context,
     api_key: &str,
-    settings: &Value,
+    _settings: &Value,
     _cost_record: &Value,
 ) -> Result<Response<ResponseBody>> {
     let batch_table = ctx.table("AnalysisBatch")?;
