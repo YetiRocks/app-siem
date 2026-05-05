@@ -522,24 +522,23 @@ curl -X PUT https://localhost:9996/app-siem/api/Settings/default \
 | `strategicInterval` | 24 | Hours between strategic (Opus) analysis runs |
 | `simulationMode` | "false" | Set to "true" to enable the simulate endpoint |
 
-### Application Config (config.yaml)
+### Application Config (Cargo.toml)
 
-```yaml
-name: "SIEM Analyzer"
-app_id: "app-siem"
-version: "0.1.0"
-description: "Security event ingestion with tiered AI analysis, cost tracking, and real-time SOC dashboard"
+App configuration lives in `Cargo.toml` under `[package.metadata.app]`. There is no separate `config.yaml` or `services.yaml`:
 
-schemas:
-  path: schemas/schema.graphql
+```toml
+[package]
+name = "app-siem"
+version = "0.1.0"
+edition = "2024"
+description = "Security event ingestion with tiered AI analysis, cost tracking, and real-time SOC dashboard"
 
-resources:
-  path: resources/*.rs
-  route: /api
-
-auth:
-  methods: [jwt, basic]
+[package.metadata.app]
+schemas = "schemas/schema.graphql"
+resources = "resources/*.rs"
 ```
+
+Auth is configured separately under `[package.metadata.auth]` (see Authentication below).
 
 ---
 
@@ -547,7 +546,7 @@ auth:
 
 ```
 app-siem/
-  config.yaml              # App configuration
+  Cargo.toml               # App configuration ([package.metadata.app] + optional [package.metadata.auth])
   schemas/
     schema.graphql         # Event, AnalysisBatch, AnalysisStrategic, CostTracking, Settings tables
   resources/
@@ -562,12 +561,28 @@ app-siem/
 
 app-siem uses yeti's built-in auth system. In development mode, all endpoints are accessible without authentication. In production:
 
-- **JWT** and **Basic Auth** supported (configured in config.yaml)
+- **JWT** and **Basic Auth** supported (configured in `Cargo.toml` under `[package.metadata.auth]`)
 - Event table allows public `read` and `subscribe` access (for SOC dashboards)
 - AnalysisBatch table allows public `read` and `subscribe` access
 - AnalysisStrategic table allows public `read` access
 - Write operations (ingest, analyze, simulate) require authentication
 - Settings table requires authentication for all operations
+
+Example auth block in `Cargo.toml`:
+
+```toml
+[package.metadata.auth]
+allow_signup = false
+default_role = "analyst"
+
+[package.metadata.auth.oauth]
+providers = [
+  { name = "google", client_id = "${GOOGLE_CLIENT_ID}", client_secret = "${GOOGLE_CLIENT_SECRET}" },
+]
+rules = [
+  { strategy = "email", pattern = "*@yetirocks.com", role = "admin" },
+]
+```
 
 ---
 
