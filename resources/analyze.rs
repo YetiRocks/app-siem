@@ -265,7 +265,7 @@ fn call_anthropic(api_key: &str, model: &str, prompt: &str, max_tokens: u32) -> 
         "messages": [{"role": "user", "content": prompt}]
     });
 
-    let resp = fetch!("POST", "https://api.anthropic.com/v1/messages")
+    let resp = yeti_sdk::utils::fetch::FetchBuilder::post("https://api.anthropic.com/v1/messages")
         .header("x-api-key", api_key)
         .header("anthropic-version", "2023-06-01")
         .header("content-type", "application/json")

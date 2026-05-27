@@ -4,7 +4,7 @@
 # AI analysis via Haiku (default) -> Sonnet (severity escalation) -> Opus (strategic)
 # Cost tracking with daily budgets and hard caps
 
-type Event @table(expiration: 604800, database: "app-siem") @export(sse: true, mqtt: true, public: [read, subscribe]) {
+type Event @table(database: "app-siem") @store(evictAfter: 604800) @export(sse: true, mqtt: true) @access(public: [read, subscribe]) {
     id: ID! @primaryKey
     timestamp: String! @indexed
     source: String! @indexed        # "akamai", "cloudflare", "aws-waf", "custom", "simulation"
@@ -26,7 +26,7 @@ type Event @table(expiration: 604800, database: "app-siem") @export(sse: true, m
     metadata: String                # JSON: arbitrary fields from source
 }
 
-type AnalysisBatch @table(expiration: 7776000, database: "app-siem") @export(sse: true, public: [read, subscribe]) {
+type AnalysisBatch @table(database: "app-siem") @store(evictAfter: 7776000) @export(sse: true) @access(public: [read, subscribe]) {
     id: ID! @primaryKey
     createdAt: String!
     model: String!                  # "haiku", "sonnet", "opus"
@@ -44,7 +44,7 @@ type AnalysisBatch @table(expiration: 7776000, database: "app-siem") @export(sse
     triggerReason: String           # "count", "time", "severity"
 }
 
-type AnalysisStrategic @table(expiration: 15552000, database: "app-siem") @export(public: [read]) {
+type AnalysisStrategic @table(database: "app-siem") @store(evictAfter: 15552000) @export @access(public: [read]) {
     id: ID! @primaryKey
     createdAt: String!
     model: String!                  # always "opus" for strategic
