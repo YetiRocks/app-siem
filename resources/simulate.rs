@@ -54,8 +54,20 @@ fn generate_scenario(scenario: &str, count: usize, base_ts: u64, batch_id: &str)
 
 fn sim_credential_stuffing(i: usize, ts: u64, batch_id: &str) -> Value {
     let ip_idx = i % 5;
-    let ips = ["192.168.1.100", "10.0.0.50", "172.16.0.22", "192.168.2.200", "10.0.1.33"];
-    let agents = ["python-requests/2.28", "Go-http-client/2.0", "curl/7.88", "axios/1.4", "bot/1.0"];
+    let ips = [
+        "192.168.1.100",
+        "10.0.0.50",
+        "172.16.0.22",
+        "192.168.2.200",
+        "10.0.1.33",
+    ];
+    let agents = [
+        "python-requests/2.28",
+        "Go-http-client/2.0",
+        "curl/7.88",
+        "axios/1.4",
+        "bot/1.0",
+    ];
     let countries = ["CN", "RU", "BR", "VN", "ID"];
     let action = if i % 3 == 0 { "allow" } else { "deny" };
     json!({
@@ -81,9 +93,13 @@ fn sim_credential_stuffing(i: usize, ts: u64, batch_id: &str) -> Value {
 }
 
 fn sim_sqli(i: usize, ts: u64, batch_id: &str) -> Value {
-    let paths = ["/api/users?id=1' OR 1=1--", "/search?q='; DROP TABLE--",
-                 "/api/products?cat=1 UNION SELECT", "/login?user=admin'--",
-                 "/api/data?filter=1;EXEC xp_cmdshell"];
+    let paths = [
+        "/api/users?id=1' OR 1=1--",
+        "/search?q='; DROP TABLE--",
+        "/api/products?cat=1 UNION SELECT",
+        "/login?user=admin'--",
+        "/api/data?filter=1;EXEC xp_cmdshell",
+    ];
     json!({
         "id": format!("sim-sq-{}-{}", ts, i),
         "timestamp": ts.to_string(),
@@ -131,9 +147,13 @@ fn sim_xss(i: usize, ts: u64, batch_id: &str) -> Value {
 }
 
 fn sim_path_traversal(i: usize, ts: u64, batch_id: &str) -> Value {
-    let paths = ["/../../etc/passwd", "/..%2f..%2fetc/shadow",
-                 "/api/../../../config.yaml", "/static/..%00/admin",
-                 "/files/../../../../etc/hosts"];
+    let paths = [
+        "/../../etc/passwd",
+        "/..%2f..%2fetc/shadow",
+        "/api/../../../config.yaml",
+        "/static/..%00/admin",
+        "/files/../../../../etc/hosts",
+    ];
     json!({
         "id": format!("sim-pt-{}-{}", ts, i),
         "timestamp": ts.to_string(),
@@ -157,9 +177,22 @@ fn sim_path_traversal(i: usize, ts: u64, batch_id: &str) -> Value {
 }
 
 fn sim_bot_scanner(i: usize, ts: u64, batch_id: &str) -> Value {
-    let paths = ["/robots.txt", "/.env", "/wp-admin", "/phpMyAdmin",
-                 "/.git/config", "/api/swagger.json", "/actuator/health"];
-    let bot_agents = ["Googlebot/2.1", "AhrefsBot/7.0", "SemrushBot/7", "MJ12bot/v1.4", "masscan/1.3"];
+    let paths = [
+        "/robots.txt",
+        "/.env",
+        "/wp-admin",
+        "/phpMyAdmin",
+        "/.git/config",
+        "/api/swagger.json",
+        "/actuator/health",
+    ];
+    let bot_agents = [
+        "Googlebot/2.1",
+        "AhrefsBot/7.0",
+        "SemrushBot/7",
+        "MJ12bot/v1.4",
+        "masscan/1.3",
+    ];
     let bot_countries = ["US", "DE", "NL", "SG", "GB"];
     json!({
         "id": format!("sim-bot-{}-{}", ts, i),

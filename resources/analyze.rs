@@ -155,24 +155,47 @@ fn sample_events<'a>(events: &[&'a Value], max: usize) -> Vec<&'a Value> {
     let target_bot = max * 20 / 100;
 
     // Deny events
-    for e in events.iter().filter(|e| e["action"].as_str() == Some("deny")) {
-        if sampled.len() >= target_deny { break; }
+    for e in events
+        .iter()
+        .filter(|e| e["action"].as_str() == Some("deny"))
+    {
+        if sampled.len() >= target_deny {
+            break;
+        }
         sampled.push(e);
     }
     // High risk
-    for e in events.iter().filter(|e| e["riskScore"].as_u64().unwrap_or(0) >= 70) {
-        if sampled.len() >= target_deny + target_risk { break; }
-        if !sampled.contains(e) { sampled.push(e); }
+    for e in events
+        .iter()
+        .filter(|e| e["riskScore"].as_u64().unwrap_or(0) >= 70)
+    {
+        if sampled.len() >= target_deny + target_risk {
+            break;
+        }
+        if !sampled.contains(e) {
+            sampled.push(e);
+        }
     }
     // High bot score
-    for e in events.iter().filter(|e| e["botScore"].as_u64().unwrap_or(0) >= 70) {
-        if sampled.len() >= target_deny + target_risk + target_bot { break; }
-        if !sampled.contains(e) { sampled.push(e); }
+    for e in events
+        .iter()
+        .filter(|e| e["botScore"].as_u64().unwrap_or(0) >= 70)
+    {
+        if sampled.len() >= target_deny + target_risk + target_bot {
+            break;
+        }
+        if !sampled.contains(e) {
+            sampled.push(e);
+        }
     }
     // Fill remaining
     for e in events {
-        if sampled.len() >= max { break; }
-        if !sampled.contains(e) { sampled.push(e); }
+        if sampled.len() >= max {
+            break;
+        }
+        if !sampled.contains(e) {
+            sampled.push(e);
+        }
     }
 
     sampled
@@ -191,33 +214,45 @@ async fn run_strategic(
     let period_start = now.saturating_sub(hours * 3600);
 
     let all_batches: Vec<Value> = batch_table.get_all().await?;
-    let recent: Vec<&Value> = all_batches.iter().filter(|b| {
-        b["createdAt"].as_str()
-            .and_then(|s| s.parse::<u64>().ok())
-            .unwrap_or(0) >= period_start
-    }).collect();
+    let recent: Vec<&Value> = all_batches
+        .iter()
+        .filter(|b| {
+            b["createdAt"]
+                .as_str()
+                .and_then(|s| s.parse::<u64>().ok())
+                .unwrap_or(0)
+                >= period_start
+        })
+        .collect();
 
     if recent.is_empty() {
         return not_found("no batch analyses in the last 24 hours");
     }
 
     // Build summary for Opus
-    let batch_summary = recent.iter().map(|b| {
-        format!("[{}] severity:{} events:{} model:{} flags:{}",
-            b["id"].as_str().unwrap_or("?"),
-            b["severity"].as_str().unwrap_or("?"),
-            b["eventCount"].as_u64().unwrap_or(0),
-            b["model"].as_str().unwrap_or("?"),
-            b["flags"].as_str().unwrap_or("[]"),
-        )
-    }).collect::<Vec<_>>().join("\n");
+    let batch_summary = recent
+        .iter()
+        .map(|b| {
+            format!(
+                "[{}] severity:{} events:{} model:{} flags:{}",
+                b["id"].as_str().unwrap_or("?"),
+                b["severity"].as_str().unwrap_or("?"),
+                b["eventCount"].as_u64().unwrap_or(0),
+                b["model"].as_str().unwrap_or("?"),
+                b["flags"].as_str().unwrap_or("[]"),
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let prompt = format!(
         "Strategic security analysis of {} batch analyses over the last {} hours.\n\n{}\n\n\
          Respond with JSON only: {{\"analysis\": \"...\", \"severity\": \"...\", \
          \"recommendations\": [...], \"campaignsDetected\": [...], \
          \"policyEffectivenessNotes\": [...], \"flags\": [...]}}",
-        recent.len(), hours, batch_summary
+        recent.len(),
+        hours,
+        batch_summary
     );
 
     let model = "claude-opus-4-6";
@@ -258,7 +293,12 @@ async fn run_strategic(
     created(record)
 }
 
-fn call_anthropic(api_key: &str, model: &str, prompt: &str, max_tokens: u32) -> Result<(String, u64, u64)> {
+fn call_anthropic(
+    api_key: &str,
+    model: &str,
+    prompt: &str,
+    max_tokens: u32,
+) -> Result<(String, u64, u64)> {
     let body = json!({
         "model": model,
         "max_tokens": max_tokens,
@@ -273,11 +313,17 @@ fn call_anthropic(api_key: &str, model: &str, prompt: &str, max_tokens: u32) -> 
         .send()?;
 
     if !resp.ok() {
-        return Err(YetiError::Validation(format!("Anthropic API error {}: {}", resp.status, resp.body)));
+        return Err(YetiError::Validation(format!(
+            "Anthropic API error {}: {}",
+            resp.status, resp.body
+        )));
     }
 
     let parsed: Value = serde_json::from_str(&resp.body).unwrap_or(json!({}));
-    let text = parsed["content"][0]["text"].as_str().unwrap_or("").to_string();
+    let text = parsed["content"][0]["text"]
+        .as_str()
+        .unwrap_or("")
+        .to_string();
     let input = parsed["usage"]["input_tokens"].as_u64().unwrap_or(0);
     let output = parsed["usage"]["output_tokens"].as_u64().unwrap_or(0);
 
@@ -320,13 +366,19 @@ async fn update_cost_tracking(
     record[&input_key] = json!(prev_input + input_tokens);
     record[&output_key] = json!(prev_output + output_tokens);
 
-    let prev_cost: f64 = record["totalCostUsd"].as_str()
-        .and_then(|s| s.parse().ok()).unwrap_or(0.0);
+    let prev_cost: f64 = record["totalCostUsd"]
+        .as_str()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0.0);
     let new_cost = prev_cost + cost;
     record["totalCostUsd"] = json!(format!("{:.6}", new_cost));
 
-    if new_cost >= 5.0 { record["budgetWarning"] = json!("true"); }
-    if new_cost >= 10.0 { record["budgetExceeded"] = json!("true"); }
+    if new_cost >= 5.0 {
+        record["budgetWarning"] = json!("true");
+    }
+    if new_cost >= 10.0 {
+        record["budgetExceeded"] = json!("true");
+    }
 
     if model != "haiku" {
         let prev_esc = record["escalationCount"].as_u64().unwrap_or(0);
