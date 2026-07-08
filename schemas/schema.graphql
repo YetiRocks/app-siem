@@ -4,7 +4,7 @@
 # AI analysis via Haiku (default) -> Sonnet (severity escalation) -> Opus (strategic)
 # Cost tracking with daily budgets and hard caps
 
-type Event @table(database: "app-siem") @store(evictAfter: 604800) @export(sse: true, mqtt: true) @access(public: [read, subscribe]) {
+type Event @table(database: "app-siem") @distribute @store(evictAfter: 604800) @export(sse: true, mqtt: true) @access(public: [read, subscribe]) {
     id: ID! @primaryKey
     timestamp: String! @indexed
     source: String! @indexed        # "akamai", "cloudflare", "aws-waf", "custom", "simulation"
