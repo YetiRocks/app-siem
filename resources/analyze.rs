@@ -16,8 +16,11 @@ resource!(Analyze {
     name = "analyze",
     post(ctx) => {
         let body: Value = ctx.require_json_body()?.clone();
-        let settings_table = ctx.table("Settings")?;
-        let cost_table = ctx.table("CostTracking")?;
+        // System handle (ADR-038, YTC-1905): `Settings` (analyzer config and
+        // provider API key) and `CostTracking` (the app's own spend ledger)
+        // are app-internal tables the caller needs no grant on.
+        let settings_table = ctx.system().table("Settings")?;
+        let cost_table = ctx.system().table("CostTracking")?;
         let event_table = ctx.table("Event")?;
 
         // Load settings
@@ -114,7 +117,9 @@ resource!(Analyze {
         }));
 
         // Store batch analysis
-        let analysis_table = ctx.table("AnalysisBatch")?;
+        // System handle: analysis results are the app's own output, written
+        // whatever the caller's grant on the result tables.
+        let analysis_table = ctx.system().table("AnalysisBatch")?;
         let analysis_id = format!("ab-{}", unix_timestamp()?);
         let now = unix_timestamp()?.to_string();
 
@@ -207,8 +212,10 @@ async fn run_strategic(
     _settings: &Value,
     _cost_record: &Value,
 ) -> Result<Response<ResponseBody>> {
-    let batch_table = ctx.table("AnalysisBatch")?;
-    let strategic_table = ctx.table("AnalysisStrategic")?;
+    // System handle: the strategic pass aggregates every batch and writes the
+    // app's own output (ADR-038).
+    let batch_table = ctx.system().table("AnalysisBatch")?;
+    let strategic_table = ctx.system().table("AnalysisStrategic")?;
     let now = unix_timestamp()?;
     let hours = 24u64;
     let period_start = now.saturating_sub(hours * 3600);
@@ -347,7 +354,8 @@ async fn update_cost_tracking(
     output_tokens: u64,
     cost: f64,
 ) -> Result<()> {
-    let cost_table = ctx.table("CostTracking")?;
+    // System handle: the app's own spend ledger (ADR-038).
+    let cost_table = ctx.system().table("CostTracking")?;
     let mut record = cost_table.get(today).await?.unwrap_or(json!({
         "id": today,
         "haikuInput": 0, "haikuOutput": 0,
