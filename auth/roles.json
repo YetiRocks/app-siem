@@ -1,0 +1,19 @@
+[
+  {
+    "id": "app-siem:analyst",
+    "appId": "app-siem",
+    "name": "Analyst",
+    "permission": {
+      "databases": {
+        "app-siem": {
+          "tables": {
+            "Event":             { "read": true, "insert": true, "update": true, "delete": false },
+            "AnalysisBatch":     { "read": true, "insert": true, "update": true, "delete": false },
+            "AnalysisStrategic": { "read": true, "insert": true, "update": true, "delete": false },
+            "CostTracking":      { "read": true, "insert": true, "update": true, "delete": false }
+          }
+        }
+      }
+    }
+  }
+]

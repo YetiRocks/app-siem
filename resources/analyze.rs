@@ -1,5 +1,8 @@
 use yeti_sdk::prelude::*;
 
+/// The role that may run analyses (`auth/roles.json`).
+const ROLE_ANALYST: &str = "app-siem:analyst";
+
 // Tiered AI analysis of security events.
 //
 // POST /app-siem/analyze
@@ -15,12 +18,23 @@ use yeti_sdk::prelude::*;
 resource!(Analyze {
     name = "analyze",
     post(ctx) => {
+        // Analysis spends provider tokens and writes the result tables, so it
+        // needs an authenticated caller holding the `analyst` role
+        // (auth/roles.json grants it the writes below). Refused before any
+        // work; the result writes run on the caller's handle, so the role's
+        // table grants are enforced again by the store (YTC-1905).
+        if !ctx.access().is_authenticated() {
+            return unauthorized("POST /app-siem/analyze needs an authenticated caller");
+        }
+        if !(ctx.access().is_super_user() || ctx.access().has_role(ROLE_ANALYST)) {
+            return error_response(403, "POST /app-siem/analyze needs the app-siem:analyst role");
+        }
         let body: Value = ctx.require_json_body()?.clone();
-        // System handle (ADR-038, YTC-1905): `Settings` (analyzer config and
-        // provider API key) and `CostTracking` (the app's own spend ledger)
-        // are app-internal tables the caller needs no grant on.
+        // System handle (ADR-038): `Settings` holds the provider API key. The
+        // app reads it to do its job; no caller role is granted it, so it is
+        // never readable over REST.
         let settings_table = ctx.system().table("Settings")?;
-        let cost_table = ctx.system().table("CostTracking")?;
+        let cost_table = ctx.table("CostTracking")?;
         let event_table = ctx.table("Event")?;
 
         // Load settings
@@ -117,9 +131,7 @@ resource!(Analyze {
         }));
 
         // Store batch analysis
-        // System handle: analysis results are the app's own output, written
-        // whatever the caller's grant on the result tables.
-        let analysis_table = ctx.system().table("AnalysisBatch")?;
+        let analysis_table = ctx.table("AnalysisBatch")?;
         let analysis_id = format!("ab-{}", unix_timestamp()?);
         let now = unix_timestamp()?.to_string();
 
@@ -212,10 +224,8 @@ async fn run_strategic(
     _settings: &Value,
     _cost_record: &Value,
 ) -> Result<Response<ResponseBody>> {
-    // System handle: the strategic pass aggregates every batch and writes the
-    // app's own output (ADR-038).
-    let batch_table = ctx.system().table("AnalysisBatch")?;
-    let strategic_table = ctx.system().table("AnalysisStrategic")?;
+    let batch_table = ctx.table("AnalysisBatch")?;
+    let strategic_table = ctx.table("AnalysisStrategic")?;
     let now = unix_timestamp()?;
     let hours = 24u64;
     let period_start = now.saturating_sub(hours * 3600);
@@ -354,8 +364,7 @@ async fn update_cost_tracking(
     output_tokens: u64,
     cost: f64,
 ) -> Result<()> {
-    // System handle: the app's own spend ledger (ADR-038).
-    let cost_table = ctx.system().table("CostTracking")?;
+    let cost_table = ctx.table("CostTracking")?;
     let mut record = cost_table.get(today).await?.unwrap_or(json!({
         "id": today,
         "haikuInput": 0, "haikuOutput": 0,
