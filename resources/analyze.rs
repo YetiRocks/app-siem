@@ -1,5 +1,10 @@
 use yeti_sdk::prelude::*;
 
+/// The role that may run analyses (`auth/roles.json`).
+// Compared as the full `{app}:{role}` id: `has_role` compares bare names, so
+// another app's role of the same bare name would pass.
+const ROLE_ANALYST: &str = "app-siem:analyst";
+
 // Tiered AI analysis of security events.
 //
 // POST /app-siem/analyze
@@ -15,8 +20,22 @@ use yeti_sdk::prelude::*;
 resource!(Analyze {
     name = "analyze",
     post(ctx) => {
+        // Analysis spends provider tokens and writes the result tables, so it
+        // needs an authenticated caller holding the `analyst` role
+        // (auth/roles.json grants it the writes below). Refused before any
+        // work; the result writes run on the caller's handle, so the role's
+        // table grants are enforced again by the store (YTC-1905).
+        if !ctx.access().is_authenticated() {
+            return unauthorized("POST /app-siem/api/analyze needs an authenticated caller");
+        }
+        if !(ctx.access().is_super_user() || ctx.access().role() == ROLE_ANALYST) {
+            return error_response(403, "POST /app-siem/api/analyze needs the app-siem:analyst role");
+        }
         let body: Value = ctx.require_json_body()?.clone();
-        let settings_table = ctx.table("Settings")?;
+        // System handle (ADR-038): `Settings` holds the provider API key. The
+        // app reads it to do its job; no caller role is granted it, so it is
+        // never readable over REST.
+        let settings_table = ctx.system().table("Settings")?;
         let cost_table = ctx.table("CostTracking")?;
         let event_table = ctx.table("Event")?;
 
