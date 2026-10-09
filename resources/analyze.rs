@@ -1,6 +1,8 @@
 use yeti_sdk::prelude::*;
 
 /// The role that may run analyses (`auth/roles.json`).
+// Compared as the full `{app}:{role}` id: `has_role` compares bare names, so
+// another app's role of the same bare name would pass.
 const ROLE_ANALYST: &str = "app-siem:analyst";
 
 // Tiered AI analysis of security events.
@@ -24,10 +26,10 @@ resource!(Analyze {
         // work; the result writes run on the caller's handle, so the role's
         // table grants are enforced again by the store (YTC-1905).
         if !ctx.access().is_authenticated() {
-            return unauthorized("POST /app-siem/analyze needs an authenticated caller");
+            return unauthorized("POST /app-siem/api/analyze needs an authenticated caller");
         }
-        if !(ctx.access().is_super_user() || ctx.access().has_role(ROLE_ANALYST)) {
-            return error_response(403, "POST /app-siem/analyze needs the app-siem:analyst role");
+        if !(ctx.access().is_super_user() || ctx.access().role() == ROLE_ANALYST) {
+            return error_response(403, "POST /app-siem/api/analyze needs the app-siem:analyst role");
         }
         let body: Value = ctx.require_json_body()?.clone();
         // System handle (ADR-038): `Settings` holds the provider API key. The
