@@ -47,7 +47,7 @@ Restart yeti. app-siem compiles automatically on first load (~2 minutes) and is 
 ### 2. Configure API key
 
 ```bash
-curl -X POST https://localhost:9996/app-siem/api/Settings \
+curl -X POST https://localhost:9996/app-siem/api/Settings/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -365,15 +365,15 @@ Full CRUD on all tables is auto-generated from the schema:
 
 | Endpoint | Methods | Description |
 |----------|---------|-------------|
-| `/app-siem/api/Event` | GET, POST | List/create events |
+| `/app-siem/api/Event/` | GET, POST | List/create events |
 | `/app-siem/api/Event/{id}` | GET, PUT, DELETE | Read/update/delete an event |
-| `/app-siem/api/AnalysisBatch` | GET, POST | List/create batch analyses |
+| `/app-siem/api/AnalysisBatch/` | GET, POST | List/create batch analyses |
 | `/app-siem/api/AnalysisBatch/{id}` | GET, PUT, DELETE | Read/update/delete a batch analysis |
-| `/app-siem/api/AnalysisStrategic` | GET, POST | List/create strategic analyses |
+| `/app-siem/api/AnalysisStrategic/` | GET, POST | List/create strategic analyses |
 | `/app-siem/api/AnalysisStrategic/{id}` | GET, PUT, DELETE | Read/update/delete a strategic analysis |
-| `/app-siem/api/CostTracking` | GET, POST | List/create cost records |
+| `/app-siem/api/CostTracking/` | GET, POST | List/create cost records |
 | `/app-siem/api/CostTracking/{id}` | GET, PUT, DELETE | Read/update/delete a cost record |
-| `/app-siem/api/Settings` | GET, POST | List/create settings |
+| `/app-siem/api/Settings/` | GET, POST | List/create settings |
 | `/app-siem/api/Settings/{id}` | GET, PUT, DELETE | Read/update/delete settings |
 
 Use `?limit=N` on collection endpoints to control result count. Use `?stream=sse` on exported tables for real-time streaming.
